@@ -21,7 +21,8 @@ class _AuthFormState extends State<AuthForm>
   final Map<String, String> _authData = {"email": "", "password": ""};
 
   AnimationController? _controller;
-  Animation<Size>? _heightAnimation;
+  Animation<double>? _opacityAnimation;
+  Animation<Offset>? _slideAnimation;
 
   bool _isLogin() => _authMode == AuthMode.Login;
   bool _isSigup() => _authMode == AuthMode.Sigup;
@@ -34,9 +35,20 @@ class _AuthFormState extends State<AuthForm>
       duration: const Duration(milliseconds: 300),
     );
 
-    _heightAnimation = Tween(
-            begin: Size(double.infinity, 350), end: Size(double.infinity, 400))
-        .animate(
+    _opacityAnimation = Tween(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller!,
+        curve: Curves.linear,
+      ),
+    );
+
+    _slideAnimation = Tween(
+      begin: const Offset(0, -1.5),
+      end: const Offset(0, 0),
+    ).animate(
       CurvedAnimation(
         parent: _controller!,
         curve: Curves.linear,
@@ -111,13 +123,15 @@ class _AuthFormState extends State<AuthForm>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
       ),
-      child: AnimatedBuilder(
-        animation: _heightAnimation!,
-        builder: (CheckboxTheme, childForm) => Container(
-            padding: const EdgeInsets.all(16),
-            height: _heightAnimation?.value.height ?? (_isLogin() ? 350 : 400),
-            width: deviceSize.width * 0.75,
-            child: childForm),
+      child: AnimatedContainer(
+        duration: const Duration(
+          milliseconds: 300,
+        ),
+        curve: Curves.easeIn,
+        padding: const EdgeInsets.all(16),
+        height: _isLogin() ? 350 : 400,
+        //height: _opacityAnimation?.value ?? (_isLogin() ? 350 : 400),
+        width: deviceSize.width * 0.75,
         child: Form(
           key: _formKey,
           child: Column(
@@ -151,24 +165,39 @@ class _AuthFormState extends State<AuthForm>
                   return null;
                 },
               ),
-              if (_isSigup())
-                TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: "Confirmar Senha",
-                  ),
-                  controller: _passwordController,
-                  keyboardType: TextInputType.emailAddress,
-                  obscureText: true,
-                  validator: _isLogin()
-                      ? null
-                      : (_password) {
-                          final password = _password ?? "";
-                          if (password != _passwordController.text) {
-                            return "Senhas informadas não conferem.";
-                          }
-                          return null;
-                        },
+              AnimatedContainer(
+                constraints: BoxConstraints(
+                  minHeight: _isLogin() ? 0 : 60,
+                  maxHeight: _isLogin() ? 0 : 120,
                 ),
+                duration: const Duration(
+                  milliseconds: 300,
+                ),
+                curve: Curves.linear,
+                child: FadeTransition(
+                  opacity: _opacityAnimation!,
+                  child: SlideTransition(
+                    position: _slideAnimation!,
+                    child: TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: "Confirmar Senha",
+                      ),
+                      controller: _passwordController,
+                      keyboardType: TextInputType.emailAddress,
+                      obscureText: true,
+                      validator: _isLogin()
+                          ? null
+                          : (_password) {
+                              final password = _password ?? "";
+                              if (password != _passwordController.text) {
+                                return "Senhas informadas não conferem.";
+                              }
+                              return null;
+                            },
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 20),
               if (_isLoading)
                 const CircularProgressIndicator()
